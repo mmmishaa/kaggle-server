@@ -34,7 +34,7 @@ class EchoRequest(BaseModel):
 
 @app.post("/echo")
 async def echo(data: EchoRequest):
-    return {"text": f"You sent: {data.word}, ​and my reply: bye!"}
+    return {"text": f"You sent: {data.word}, and my reply: bye!"}
 
 def delayed_shutdown():
     time.sleep(1)
