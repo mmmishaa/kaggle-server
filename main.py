@@ -109,12 +109,13 @@ def build_kernel_payload(kernel_dir: Path):
 
     metadata = {
         "id": kernel_slug,
-        "title": "Kaggle Server Test",
+        "title": "Kaggle Server",
         "code_file": "service.py",
         "language": "python",
         "kernel_type": "script",
         "is_private": "true",
-        "enable_gpu": "false",
+        "accelerator": "NvidiaTeslaT4Highmem",
+        "machine_shape": "NvidiaTeslaT4",
         "enable_internet": "true",
         "dataset_sources": [],
         "competition_sources": [],
@@ -161,7 +162,9 @@ if __name__ == '__main__':
     ping_server_health(remote_url)
 
     logger.info("Sending test request to Kaggle server...")
-    payload = {"word": "Привет, облачный сервер!"} ### ИСПРАВИТЬ!
+
+    payload = {"word": "Hello, cloud server!"}
+
     response = requests.post(f"{remote_url}/echo", json=payload, timeout=15)
     
     logger.info(f"Server response code: {response.status_code}")

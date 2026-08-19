@@ -14,7 +14,7 @@ from pydantic import BaseModel
 import requests
 import uvicorn
 
-logging.basicConfig(
+logging.basicConfig(    
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%H:%M:%S",
@@ -34,7 +34,7 @@ class EchoRequest(BaseModel):
 
 @app.post("/echo")
 async def echo(data: EchoRequest):
-    return {"text": f"Ты прислал: {data.word}, а мой ответ: пока!"}
+    return {"text": f"You sent: {data.word}, ​and my reply: bye!"}
 
 def delayed_shutdown():
     time.sleep(1)
