@@ -1,12 +1,13 @@
-import logging
 import os
 import re
+import sys
+import time
+import logging
+import threading
 import subprocess
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-import time
-import signal
 
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
@@ -22,6 +23,8 @@ logger = logging.getLogger("kaggle_service")
 
 app = FastAPI(title="Kaggle Server")
 
+server = None
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -34,10 +37,10 @@ async def echo(data: EchoRequest):
     return {"text": f"Ты прислал: {data.word}, а мой ответ: пока!"}
 
 def delayed_shutdown():
-    """Дает серверу 1 секунду, чтобы успеть отправить HTTP 200 OK клиенту перед смертью."""
     time.sleep(1)
-    logger.info("Terminating Kaggle server process...")
-    os.kill(os.getpid(), signal.SIGTERM)
+    logger.info("Gracefully stopping Uvicorn server...")
+    if server:
+        server.should_exit = True
 
 @app.post("/shutdown")
 def shutdown(background_tasks: BackgroundTasks):
@@ -94,7 +97,7 @@ GITHUB_API_URL = "https://api.github.com/gists"
 def update_gist(
     gist_id: str,
     github_token: str,
-    tunnel_url: str,
+    tunnel_url: str = None,
     filename: str = "server_info.json",
     status: str = "ready",
 ) -> None:
@@ -103,7 +106,7 @@ def update_gist(
     payload = {
         "files": {
             filename: {
-                "content": f'{{"url": "{tunnel_url}", "status": "{status}", "updated_at": "{datetime.now(timezone.utc).isoformat()}"}}'
+                "content": f'{{"url": "{tunnel_url or ""}", "status": "{status}", "updated_at": "{datetime.now(timezone.utc).isoformat()}"}}'
             }
         }
     }
@@ -114,10 +117,12 @@ def update_gist(
         "X-GitHub-Api-Version": "2022-11-28",
     }
 
-    logger.info("Publishing tunnel URL to GitHub Gist (%s)...", gist_id)
-    response = requests.patch(url, json=payload, headers=headers, timeout=10)
-    response.raise_for_status()
-    logger.info("GitHub Gist updated successfully.")
+    logger.info("Updating GitHub Gist (%s) with status '%s'...", gist_id, status)
+    try:
+        response = requests.patch(url, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+    except Exception as e:
+        logger.warning("Failed to update Gist: %s", e)
 
 if __name__ == "__main__":
     HOST = os.getenv("HOST", "127.0.0.1")
@@ -136,13 +141,22 @@ if __name__ == "__main__":
                 tunnel_url=public_url,
                 status="online",
             )
-        else:
-            logger.warning("GIST_ID or GITHUB_TOKEN missing. Gist update skipped.")
+
+        config = uvicorn.Config(app=app, host=HOST, port=PORT, log_level="info")
+        server = uvicorn.Server(config)
 
         logger.info("Starting Uvicorn server on %s:%d...", HOST, PORT)
-        uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+        server.run()
 
     finally:
+        logger.info("Cleaning up server resources...")
+        if GIST_ID and GITHUB_TOKEN:
+            update_gist(
+                gist_id=GIST_ID,
+                github_token=GITHUB_TOKEN,
+                tunnel_url=None,
+                status="offline",
+            )
         if tunnel_proc:
             logger.info("Stopping Cloudflare tunnel...")
             tunnel_proc.terminate()

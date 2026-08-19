@@ -9,7 +9,7 @@ import requests
 import time
 
 from client.gist_init import create_registry_gist
-from client.client import reset_gist_status, wait_for_server_url
+from client.client import reset_gist_status, wait_for_server_url, stop_server, ping_server_health
 
 logging.basicConfig(
     level=logging.INFO,
@@ -143,7 +143,6 @@ def build_kernel_payload(kernel_dir: Path):
     logger.info("Kernel payload successfully built from 'server/service.py'.")
     return kernel_slug
 
-
 if __name__ == '__main__':
     KERNEL_FOLDER = Path("./kernel_folder")
 
@@ -159,9 +158,14 @@ if __name__ == '__main__':
 
     remote_url = wait_for_server_url(GIST_ID, GITHUB_TOKEN, slug)
 
+    ping_server_health(remote_url)
+
     logger.info("Sending test request to Kaggle server...")
-    payload = {"word": "Привет, облачный сервер!"}
+    payload = {"word": "Привет, облачный сервер!"} ### ИСПРАВИТЬ!
     response = requests.post(f"{remote_url}/echo", json=payload, timeout=15)
     
     logger.info(f"Server response code: {response.status_code}")
     logger.info(f"Response body: {response.json()}")
+
+    stop_server(remote_url)
+    logger.info("Session finished successfully. Server is shutting down.")
