@@ -1,5 +1,7 @@
 # Kaggle Server Template
 
+English | [Русский](README.ru.md)
+
 A template for deploying a remote FastAPI server inside the Kaggle environment (with GPU support), automatically exposing a secure HTTPS tunnel via Cloudflare, and syncing connection metadata via GitHub Gist.
 
 Designed as a template repository for bootstrapping and running AI/ML models.
