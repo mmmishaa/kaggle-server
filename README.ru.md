@@ -44,8 +44,8 @@
 1. Клонируйте репозиторий:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/kaggle-server-base.git
-cd kaggle-server-base
+git clone https://github.com/mmmishaa/kaggle-server.git
+cd kaggle-server
 ```
 
 2. Установите зависимости:
